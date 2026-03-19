@@ -14,7 +14,8 @@ from helper_functions import (
     filter_z_mat_consumption_data,
     extract_unique_mb51_files,
     load_grouped_mb51_dataframes,
-    retrieve_supplier_name
+    retrieve_supplier_name,
+    retrieve_plant
 )
 
 
@@ -29,20 +30,17 @@ mb52_dtypes = {
     'Werk': 'string',
 }
 
-z_mat_consumption_dtypes = {
-    'Material': 'string',
-    'movement': 'string',
-}
-
 mb51_consumption_dtypes = {
     'Materiał': 'string',
+    'Zakład': 'string',
 }
 
 MB51_new_col_names = {
     'Materiał': 'Material',
     'Data księgowania': 'date',
     'Ilość': 'quantity',
-    'Podst. jedn. miary': 'unit'
+    'Podst. jedn. miary': 'unit',
+    'Zakład': 'plant'
 }
 
 supplier_files_dict = {
@@ -109,8 +107,6 @@ MB551_dfs = load_grouped_mb51_dataframes(
 
 # TODO: Change path
 supplier_files_paths = list_excel_files(supplier_files_directory_path_test)
-excel_sheet = "2101_data"
-plant = '2101',
 
 storage_locs = ('0003', '0004', '0005', '0007')
 
@@ -135,8 +131,10 @@ usage_parameters = [(next_20_days_year_ago, 'C'),
 ]
 
 for file_path in supplier_files_paths:
+    plant = retrieve_plant(file_path)
+    excel_sheet = f"{plant}_data"
 
-    # DONE: Retrive supplier name from file path and get corresponding df
+    # DONE: Retrieve supplier name from file path and get corresponding df
     supplier_name = retrieve_supplier_name(file_path)
     z_mat_or_mb51_consumption_df = MB551_dfs[supplier_files_dict[supplier_name][0]]
 
@@ -144,7 +142,7 @@ for file_path in supplier_files_paths:
     zek103_output = get_zek103_data(zek103_content, plant, sap_list)
     update_excel_with_quantities(file_path, zek103_output, 'SAP', 'CONSUMPTION', excel_sheet, True)
 
-    mb52 = filter_mb52_data(mb52df, sap_list, '2101', storage_locs)
+    mb52 = filter_mb52_data(mb52df, sap_list, plant, storage_locs)
     # Wywołanie funkcji
     update_excel_with_dataframe(
         file_path=file_path,
@@ -157,7 +155,7 @@ for file_path in supplier_files_paths:
     )
 
     for parameter in usage_parameters:
-        z_mat_consumption_grouped = filter_z_mat_consumption_data(z_mat_or_mb51_consumption_df, sap_list, parameter[0])
+        z_mat_consumption_grouped = filter_z_mat_consumption_data(z_mat_or_mb51_consumption_df, sap_list, parameter[0], plant)
 
         # wpisanie danych do Excela
         update_excel_with_dataframe(

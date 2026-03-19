@@ -49,7 +49,7 @@ def get_supplier_sap_numbers(filepath, sheet_name=None):
     return sap_numbers
 
 def get_zek103_data(zek103_data, plant, sap_numbers):
-    zek103_data = zek103_data[zek103_data['Werk'].isin(plant)]
+    zek103_data = zek103_data[zek103_data['Werk'] == plant]
     zek103_data = zek103_data[zek103_data['Mat'].isin(sap_numbers)]
 
     zek103_data_grouped = zek103_data.groupby(['Lieferdatum', 'Mat'], as_index=False)['Best-Mg'].sum()
@@ -220,7 +220,7 @@ def update_excel_with_dataframe(file_path, dataframe, sap_column, frei_column, h
 def get_mb51_consumption_data(z_mat_file_path, dtypes, col_names):
     df = pd.read_excel(z_mat_file_path, dtype=dtypes)
     df = df.rename(columns=col_names)
-    df = df.groupby(['Material', 'date'], as_index=False)['quantity'].sum()
+    df = df.groupby(['Material', 'date', 'plant'], as_index=False)['quantity'].sum()
     df['date'] = pd.to_datetime(df['date']).dt.date  # Konwersja na `datetime.date`
 
     return df
@@ -239,15 +239,15 @@ def get_past_workdays(start_date, num_days, mode="last", country_holidays=None):
             current_date -= datetime.timedelta(days=1)
         elif mode == "next":
             current_date += datetime.timedelta(days=1)
-        # Sprawdź czy to dzień roboczy
+        # Sprawdź, czy to dzień roboczy
         if current_date.weekday() < 5:  # poniedziałek=0, piątek=4
             if country_holidays is None or current_date not in country_holidays:
                 workdays.append(current_date)
 
     return workdays
 
-def filter_z_mat_consumption_data(consumption_df, mat_list, days_range):
-    consumption_df_filtered = consumption_df[(consumption_df['date'].isin(days_range)) & (consumption_df['Material'].isin(mat_list))]
+def filter_z_mat_consumption_data(consumption_df, mat_list, days_range, plant):
+    consumption_df_filtered = consumption_df[(consumption_df['date'].isin(days_range)) & (consumption_df['Material'].isin(mat_list)) & (consumption_df['plant'] == plant)]
     consumption_df_grouped = consumption_df_filtered.groupby('Material', as_index=False)['quantity'].sum()
 
     return consumption_df_grouped
@@ -281,6 +281,8 @@ def load_grouped_mb51_dataframes(
     """
     Load and combine files into DataFrames grouped by key.
 
+    :param col_names_mb51:
+    :param dtypes_mb51:
     :param dtypes:
     :param grouped_files: dict, e.g. {"CONS_246": ["CONS_246", "CONS_246_2"]}
     :param base_path: directory path containing the files
@@ -293,6 +295,7 @@ def load_grouped_mb51_dataframes(
     result = {}
 
     for group_key, file_list in grouped_files.items():
+        print(f"Processing {group_key}")
         dataframes = []
 
         for file_name in file_list:
@@ -329,13 +332,31 @@ def retrieve_supplier_name(file_path: str) -> str:
     Extract supplier name from full file path.
 
     Example:
-    'P:\\...\\PurchAutomation_ABC_COLORE.xlsm' -> 'ABC_COLORE'
+    'P:\\...\\PurchAutomation_2101_ABC_COLORE.xlsm' -> 'ABC_COLORE'
     """
 
     file_name = Path(file_path).name  # extract file name
 
     start = file_name.find("_")
     end = file_name.rfind(".")
+
+    if start == -1 or end == -1 or start >= end:
+        raise ValueError(f"Invalid file name format: {file_path}")
+
+    return file_name[start + 6:end]
+
+def retrieve_plant(file_path: str) -> str:
+    """
+    Extract plant code from full file path.
+
+    Example:
+    'P:\\...\\PurchAutomation_2101_ABC_COLORE.xlsm' -> 'ABC_COLORE'
+    """
+
+    file_name = Path(file_path).name  # extract file name
+
+    start = file_name.find("_")
+    end = start + 5
 
     if start == -1 or end == -1 or start >= end:
         raise ValueError(f"Invalid file name format: {file_path}")
