@@ -57,6 +57,8 @@ def get_zek103_data(zek103_data, plant, sap_numbers):
     zek103_data_grouped['Lieferdatum'] = pd.to_datetime(zek103_data_grouped['Lieferdatum'])  # opcjonalna konwersja na datę
     zek103_data_grouped['delayed'] = zek103_data_grouped['Lieferdatum'] < pd.Timestamp('today').normalize()
 
+    zek103_data_grouped.to_excel(r'P:\Technisch\PLANY PRODUKCJI\PLANIŚCI\PP_TOOLS_TEMP_FILES\12_PURCHASE_AUTOMATION\export\zek103_data_grouped.xlsx')
+
     return zek103_data_grouped
 
 def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_bound, sheet_name, is_order_data=False):
@@ -67,7 +69,6 @@ def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_
     :param filepath: Path to the Excel file
     :param df: DataFrame with columns ['Lieferdatum', 'Mat', 'Best-Mg', 'delayed']
     """
-
     # Load the workbook
     wb = openpyxl.load_workbook(filepath, keep_vba=True)
     # sheet = wb.active  # Operate on the active sheet
@@ -112,6 +113,9 @@ def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_
 
     # Iterate over the DataFrame rows
     for _, row in df.iterrows():
+        sap_row = None
+        date_col = None
+
         lieferdatum = row['Lieferdatum']
         mat_number = row['Mat']
         quantity = row['Best-Mg']
@@ -127,9 +131,11 @@ def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_
         if mat_number in sap_numbers and lieferdatum in date_columns:
             sap_row = sap_numbers[mat_number]
             date_col = date_columns[lieferdatum]
-            if delayed and is_order_data:
-                date_col = date_columns['delayed']
+        if delayed and is_order_data:
+            sap_row = sap_numbers[mat_number]
+            date_col = date_columns['delayed']
 
+        if sap_row is not None and date_col is not None:
             # Write quantity to the matched cell
             sheet.cell(row=sap_row, column=date_col).value = quantity
 
