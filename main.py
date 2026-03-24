@@ -31,16 +31,16 @@ mb52_dtypes = {
 }
 
 mb51_consumption_dtypes = {
-    'Materiał': 'string',
-    'Zakład': 'string',
+    'Material': 'string',
+    'Werk': 'string',
 }
 
 MB51_new_col_names = {
-    'Materiał': 'Material',
-    'Data księgowania': 'date',
-    'Ilość': 'quantity',
-    'Podst. jedn. miary': 'unit',
-    'Zakład': 'plant'
+    'Material': 'Material',
+    'Buchungsdatum': 'date',
+    'Menge': 'quantity',
+    'Basis-ME': 'unit',
+    'Werk': 'plant'
 }
 
 supplier_files_dict = {

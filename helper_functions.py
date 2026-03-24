@@ -57,8 +57,6 @@ def get_zek103_data(zek103_data, plant, sap_numbers):
     zek103_data_grouped['Lieferdatum'] = pd.to_datetime(zek103_data_grouped['Lieferdatum'])  # opcjonalna konwersja na datę
     zek103_data_grouped['delayed'] = zek103_data_grouped['Lieferdatum'] < pd.Timestamp('today').normalize()
 
-    zek103_data_grouped.to_excel(r'P:\Technisch\PLANY PRODUKCJI\PLANIŚCI\PP_TOOLS_TEMP_FILES\12_PURCHASE_AUTOMATION\export\zek103_data_grouped.xlsx')
-
     return zek103_data_grouped
 
 def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_bound, sheet_name, is_order_data=False):
