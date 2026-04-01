@@ -108,7 +108,7 @@ MB551_dfs = load_grouped_mb51_dataframes(
 # TODO: Change path
 supplier_files_paths = list_excel_files(supplier_files_directory_path_test)
 
-storage_locs = ('0003', '0004', '0005', '0007')
+storage_locs = ('0003', '0004', '0005', '0007', '0710')
 
 current_year = datetime.date.today().year
 years_list = [current_year - 1, current_year, current_year + 1]
