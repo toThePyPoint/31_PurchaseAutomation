@@ -163,14 +163,14 @@ def get_mb52_data(file_path, dtypes):
     df = pd.read_excel(file_path, dtype=dtypes)
     return df
 
-def filter_mb52_data(df, sap_numbers, plant='2101', storage_locs='0007'):
+def filter_mb52_data(df, sap_numbers, plant='2101', storage_locs='0007', col_name='Frei verwendbar'):
     # Ensure storage locks is a tuple (convert if necessary)
     if isinstance(storage_locs, str):
         storage_locs = storage_locs,
 
     df = df[(df['Lagerort'].isin(storage_locs)) & (df['Werk'] == plant) & (df['Material'].isin(sap_numbers))]
 
-    df_grouped = df.groupby(['Material'], as_index=False)['Frei verwendbar'].sum()
+    df_grouped = df.groupby(['Material'], as_index=False)[col_name].sum()
 
     return df_grouped
 

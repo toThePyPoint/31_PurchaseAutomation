@@ -1,6 +1,7 @@
 import pandas as pd
 import datetime
 import holidays  # jeśli chcesz uwzględnić święta
+import traceback
 
 from helper_functions import (
     get_supplier_sap_numbers,
@@ -143,16 +144,28 @@ try:
         zek103_output = get_zek103_data(zek103_content, plant, sap_list)
         update_excel_with_quantities(file_path, zek103_output, 'SAP', 'CONSUMPTION', excel_sheet, True)
 
-        mb52 = filter_mb52_data(mb52df, sap_list, plant, storage_locs)
+        mb52_stock = filter_mb52_data(mb52df, sap_list, plant, storage_locs, 'Frei verwendbar')
+        mb52_pqm = filter_mb52_data(mb52df, sap_list, plant, storage_locs, 'In QualPrüfung')
         # Wywołanie funkcji
         update_excel_with_dataframe(
             file_path=file_path,
-            dataframe=mb52,
+            dataframe=mb52_stock,
             sap_column='A',  # Kolumna z numerami SAP w Excelu
-            frei_column='K',  # Kolumna, do której wpisywane są dane
+            frei_column='I',  # Kolumna, do której wpisywane są dane
             header_start='Stock',  # Nagłówek wskazujący początek
             header_end='S.C',       # Nagłówek wskazujący koniec
             sheet_name=excel_sheet,
+        )
+
+        update_excel_with_dataframe(
+            file_path=file_path,
+            dataframe=mb52_pqm,
+            sap_column='A',  # Kolumna z numerami SAP w Excelu
+            frei_column='J',  # Kolumna, do której wpisywane są dane
+            header_start='Stock',  # Nagłówek wskazujący początek
+            header_end='S.C',       # Nagłówek wskazujący koniec
+            sheet_name=excel_sheet,
+            col_name= 'In QualPrüfung'
         )
 
         for parameter in usage_parameters:
@@ -171,5 +184,5 @@ try:
             )
 
 except Exception as e:
-    print("Error: {}".format(e))
-    input("Press Enter to continue...")
+    error_details = traceback.format_exc()
+    print(f"Wystąpił błąd:\n{error_details}")
