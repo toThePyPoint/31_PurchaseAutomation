@@ -134,7 +134,7 @@ try:
 
     for file_path in supplier_files_paths:
         plant = retrieve_plant(file_path)
-        excel_sheet = f"{plant}_data"
+        excel_sheet = f"data"
 
         # DONE: Retrieve supplier name from file path and get corresponding df
         supplier_name = retrieve_supplier_name(file_path)
