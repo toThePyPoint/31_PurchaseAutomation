@@ -76,6 +76,12 @@ supplier_files_dict = {
     "KABEL_MAIER": ["CONS_239", "CONS_239_2"],
     "GRUNEFELD": ["CONS_239", "CONS_239_2"],
     "HAFELE": ["CONS_234", "CONS_234_2"],
+    "BECKER": ["CONS_337", "CONS_337_2"],
+    "INTERNATIO": ["CONS_337", "CONS_337_2"],
+    "RHEINZINK": ["CONS_337", "CONS_337_2"],
+    "SCHOLLGLAS": ["CONS_337", "CONS_337_2"],
+    "WALTRON": ["CONS_337", "CONS_337_2"],
+    "UNION": ["CONS_234", "CONS_234_2"],
 }
 
 
