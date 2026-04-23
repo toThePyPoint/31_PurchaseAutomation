@@ -2,6 +2,7 @@ import pandas as pd
 import datetime
 import holidays  # jeśli chcesz uwzględnić święta
 import traceback
+import logging
 
 from helper_functions import (
     get_supplier_sap_numbers,
@@ -88,10 +89,18 @@ supplier_files_directory_path_test = r'P:\Technisch\PLANY PRODUKCJI\PLANIŚCI\PP
 supplier_files_directory_path = r'P:\Zakupy\O\SupplierAutomation\supplier_files'
 export_files_directory_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION"
 
+ERROR_LOG_PATH = r"P:\Zakupy\O\SupplierAutomation\error.log"
 
 # Updating the open orders data
 
 movement_types = ('261', '313')
+
+logging.basicConfig(
+    filename=ERROR_LOG_PATH,
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+
 try:
     zek103_content = pd.read_excel(zek103_file_path, dtype=zek103_dtypes)
     mb52df = get_mb52_data(mb52_file_path, mb52_dtypes)
@@ -108,7 +117,7 @@ try:
 
 
     # TODO: Change path
-    supplier_files_paths = list_excel_files(supplier_files_directory_path_test)
+    supplier_files_paths = list_excel_files(supplier_files_directory_path)
 
     storage_locs = ('0003', '0004', '0005', '0007', '0710')
 
@@ -184,5 +193,7 @@ try:
             )
 
 except Exception as e:
+    logging.error("Error occurred", exc_info=True)
     error_details = traceback.format_exc()
     print(f"Wystąpił błąd:\n{error_details}")
+    input("Press Enter to continue...")
