@@ -20,6 +20,7 @@ from helper_functions import (
     retrieve_plant
 )
 
+from suppliers_map import supplier_files_dict
 
 zek103_dtypes = {
     'Werk': 'string',
@@ -44,46 +45,6 @@ MB51_new_col_names = {
     'Basis-ME': 'unit',
     'Werk': 'plant'
 }
-
-supplier_files_dict = {
-    "SHC": ["CONS_246", "CONS_246_2"],
-    "HESSE": ["CONS_246", "CONS_246_2"],
-    "ROTO_ELZETT": ["CONS_246", "CONS_246_2"],
-    "TOKOZ": ["CONS_246", "CONS_246_2"],
-    "HOHAGE": ["CONS_246", "CONS_246_2"],
-    "KROSNO": ["CONS_246", "CONS_246_2"],
-    "FRANZEN": ["CONS_246", "CONS_246_2"],
-    "ROZTOCZE": ["CONS_246", "CONS_246_2"],
-    "BELATRONIC": ["CONS_246", "CONS_246_2"],
-    "DEVENTER": ["CONS_246", "CONS_246_2"],
-    "NMC": ["CONS_246", "CONS_246_2"],
-    "NEHER": ["CONS_223", "CONS_223_2"],
-    "EJOT": ["CONS_224", "CONS_224_2"],
-    "SPAX": ["CONS_224", "CONS_224_2"],
-    "PROFINE": ["CONS_224", "CONS_224_2"],
-    "STOROPACK": ["CONS_234", "CONS_234_2"],
-    "YUYAO_JILO": ["CONS_234", "CONS_234_2"],
-    "BRETTHAUER": ["CONS_234", "CONS_234_2"],
-    "LEO_FRANCOIS": ["CONS_234", "CONS_234_2"],
-    "GALLARDO": ["CONS_234", "CONS_234_2"],
-    "REISSER": ["CONS_234", "CONS_234_2"],
-    "ABC_COLORE": ["CONS_228", "CONS_228_2"],
-    "BACCARAT": ["CONS_228", "CONS_228_2"],
-    "DOMICET": ["CONS_239", "CONS_239_2"],
-    "BIZEA": ["CONS_239", "CONS_239_2"],
-    "DAFA": ["CONS_239", "CONS_239_2"],
-    "RETECH": ["CONS_239", "CONS_239_2"],
-    "KABEL_MAIER": ["CONS_239", "CONS_239_2"],
-    "GRUNEFELD": ["CONS_239", "CONS_239_2"],
-    "HAFELE": ["CONS_234", "CONS_234_2"],
-    "BECKER": ["CONS_337", "CONS_337_2"],
-    "INTERNATIO": ["CONS_337", "CONS_337_2"],
-    "RHEINZINK": ["CONS_337", "CONS_337_2"],
-    "SCHOLLGLAS": ["CONS_337", "CONS_337_2"],
-    "WALTRON": ["CONS_337", "CONS_337_2"],
-    "UNION": ["CONS_234", "CONS_234_2"],
-}
-
 
 zek103_file_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION\ZEK103_PUR_LUB_002.xlsx"
 mb52_file_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION\MB52_PUR_LUB_003.xlsx"
