@@ -52,7 +52,7 @@ def get_zek103_data(zek103_data, plant, sap_numbers):
     zek103_data = zek103_data[zek103_data['Werk'] == plant]
     zek103_data = zek103_data[zek103_data['Mat'].isin(sap_numbers)]
 
-    zek103_data_grouped = zek103_data.groupby(['Lieferdatum', 'Mat'], as_index=False)['Best-Mg'].sum()
+    zek103_data_grouped = zek103_data.groupby(['Lieferdatum', 'Mat'], as_index=False)['Off. Mg'].sum()
 
     zek103_data_grouped['Lieferdatum'] = pd.to_datetime(zek103_data_grouped['Lieferdatum'])  # opcjonalna konwersja na datę
     zek103_data_grouped['delayed'] = zek103_data_grouped['Lieferdatum'] < pd.Timestamp('today').normalize()
