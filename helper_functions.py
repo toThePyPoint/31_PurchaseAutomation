@@ -116,7 +116,7 @@ def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_
 
         lieferdatum = row['Lieferdatum']
         mat_number = row['Mat']
-        quantity = row['Best-Mg']
+        quantity = row['Off. Mg']
         delayed = row['delayed']
 
         # Ensure lieferdatum is a date (convert if necessary)
