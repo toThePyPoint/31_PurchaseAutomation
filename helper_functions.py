@@ -17,6 +17,8 @@ def get_supplier_sap_numbers(filepath, sheet_name=None):
     :return: List of SAP numbers (values from column A)
     """
     # Open the Excel file
+    print("Filepath: ", filepath)
+    print("sheet_name: ", sheet_name)
     wb = openpyxl.load_workbook(filepath, keep_vba=True)
     if sheet_name:
         sheet = wb[sheet_name]
@@ -57,6 +59,7 @@ def get_zek103_data(zek103_data, plant, sap_numbers):
     zek103_data_grouped['Lieferdatum'] = pd.to_datetime(zek103_data_grouped['Lieferdatum'])  # opcjonalna konwersja na datę
     zek103_data_grouped['delayed'] = zek103_data_grouped['Lieferdatum'] < pd.Timestamp('today').normalize()
 
+    print("ZEK103_data: ", zek103_data_grouped)
     return zek103_data_grouped
 
 def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_bound, sheet_name, is_order_data=False):
