@@ -156,8 +156,11 @@ def list_excel_files(directory):
     xlsx_files = glob.glob(os.path.join(directory, '*.xlsx'))
     xlsm_files = glob.glob(os.path.join(directory, '*.xlsm'))
 
-    # Combine the two lists
-    excel_files = xlsx_files + xlsm_files
+    # Combine and filter out temporary Excel files
+    excel_files = [
+        f for f in (xlsx_files + xlsm_files)
+        if not os.path.basename(f).startswith('~$')
+    ]
 
     return excel_files
 

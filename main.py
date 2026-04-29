@@ -87,7 +87,7 @@ try:
     supplier_files_paths = list_excel_files(supplier_files_directory_path)
     print(supplier_files_paths)
 
-    storage_locs = ('0003', '0004', '0005', '0007', '0710', '0002', '0610', '0680')
+    storage_locs = ('0003', '0004', '0005', '0007', '0710', '0002', '0610', '0680', '0630', '0670')
 
     current_year = datetime.date.today().year
     years_list = [current_year - 1, current_year, current_year + 1]
