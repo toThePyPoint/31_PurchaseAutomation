@@ -5,6 +5,8 @@ import datetime
 import os
 import glob
 from pathlib import Path
+import time
+import logging
 
 
 def get_supplier_sap_numbers(filepath, sheet_name=None):
@@ -142,6 +144,7 @@ def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_
 
     # Save the updated workbook
     wb.save(filepath)
+    wb.close()
     print(f"Excel file {os.path.basename(filepath)} updated successfully.")
 
 def list_excel_files(directory):
@@ -225,6 +228,7 @@ def update_excel_with_dataframe(file_path, dataframe, sap_column, frei_column, h
 
     # Zapisanie pliku Excel
     workbook.save(file_path)
+    workbook.close()
     print(f"Plik {file_path} został zaktualizowany.")
 
 def get_mb51_consumption_data(z_mat_file_path, dtypes, col_names):
@@ -372,3 +376,45 @@ def retrieve_plant(file_path: str) -> str:
         raise ValueError(f"Invalid file name format: {file_path}")
 
     return file_name[start + 1:end]
+
+
+def retry(
+    func,
+    retries=5,
+    delay=2,
+    exceptions=(PermissionError, OSError),
+    *args,
+    **kwargs
+):
+    """
+    Retry wrapper for unstable file/network operations.
+    """
+
+    for attempt in range(1, retries + 1):
+
+        try:
+            return func(*args, **kwargs)
+
+        except exceptions as e:
+
+            logging.warning(
+                f"{type(e).__name__} in {func.__name__} "
+                f"(attempt {attempt}/{retries}): {e}"
+            )
+
+            if attempt == retries:
+                logging.error(
+                    f"Final failure in {func.__name__}",
+                    exc_info=True
+                )
+                raise
+
+            wait_time = delay * attempt
+
+            print(
+                f"{type(e).__name__} detected "
+                f"for file operation. "
+                f"Retry in {wait_time}s..."
+            )
+
+            time.sleep(wait_time)

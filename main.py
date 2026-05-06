@@ -17,7 +17,8 @@ from helper_functions import (
     extract_unique_mb51_files,
     load_grouped_mb51_dataframes,
     retrieve_supplier_name,
-    retrieve_plant
+    retrieve_plant,
+    retry
 )
 
 from suppliers_map import supplier_files_dict
@@ -63,11 +64,13 @@ ERROR_LOG_PATH = r"P:\Zakupy\O\SupplierAutomation\error.log"
 movement_types = ('261', '313')
 
 logging.basicConfig(
-    filename=ERROR_LOG_PATH,
-    level=logging.ERROR,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler(ERROR_LOG_PATH),
+        logging.StreamHandler()
+    ]
 )
-
 try:
     zek103_content = pd.read_excel(zek103_file_path, dtype=zek103_dtypes)
     mb52df = get_mb52_data(mb52_file_path, mb52_dtypes)
@@ -87,7 +90,7 @@ try:
     supplier_files_paths = list_excel_files(supplier_files_directory_path)
     print(supplier_files_paths)
 
-    storage_locs = ('0003', '0004', '0005', '0007', '0710', '0002', '0610', '0680', '0630', '0670')
+    storage_locs = ('0003', '0004', '0005', '0007', '0710', '0002', '0610', '0680', '0630', '0670', '0600', '0611', '0620', '0631', '0632', '0640', '0650', '0660', '0690')
 
     current_year = datetime.date.today().year
     years_list = [current_year - 1, current_year, current_year + 1]
@@ -119,12 +122,18 @@ try:
 
         sap_list = get_supplier_sap_numbers(file_path, excel_sheet)
         zek103_output = get_zek103_data(zek103_content, plant, sap_list)
-        update_excel_with_quantities(file_path, zek103_output, 'SAP', 'CONSUMPTION', excel_sheet, True)
+        retry(update_excel_with_quantities,
+              filepath=file_path,
+              df=zek103_output,
+              header_upper_bound='SAP',
+              header_lower_bound='CONSUMPTION',
+              sheet_name=excel_sheet,
+              is_order_data=True)
 
         mb52_stock = filter_mb52_data(mb52df, sap_list, plant, storage_locs, 'Frei verwendbar')
         mb52_pqm = filter_mb52_data(mb52df, sap_list, plant, storage_locs, 'In QualPrüfung')
         # Wywołanie funkcji
-        update_excel_with_dataframe(
+        retry(update_excel_with_dataframe,
             file_path=file_path,
             dataframe=mb52_stock,
             sap_column='A',  # Kolumna z numerami SAP w Excelu
@@ -134,7 +143,7 @@ try:
             sheet_name=excel_sheet,
         )
 
-        update_excel_with_dataframe(
+        retry(update_excel_with_dataframe,
             file_path=file_path,
             dataframe=mb52_pqm,
             sap_column='A',  # Kolumna z numerami SAP w Excelu
@@ -149,7 +158,7 @@ try:
             z_mat_consumption_grouped = filter_z_mat_consumption_data(z_mat_or_mb51_consumption_df, sap_list, parameter[0], plant)
 
             # wpisanie danych do Excela
-            update_excel_with_dataframe(
+            retry(update_excel_with_dataframe,
                 file_path=file_path,
                 dataframe=z_mat_consumption_grouped,
                 sap_column='A',  # Kolumna z numerami SAP w Excelu
