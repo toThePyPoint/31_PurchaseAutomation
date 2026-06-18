@@ -56,7 +56,36 @@ def get_zek103_data(zek103_data, plant, sap_numbers):
     zek103_data = zek103_data[zek103_data['Werk'] == plant]
     zek103_data = zek103_data[zek103_data['Mat'].isin(sap_numbers)]
 
-    zek103_data_grouped = zek103_data.groupby(['Lieferdatum', 'Mat'], as_index=False)['Off. Mg'].sum()
+    # Implement the logic which ensures operating on appropriate set of data (date of delivery and order quantity)
+    zek103_data = zek103_data.copy()
+    confirmed_delivery_date_present = (
+        zek103_data['Best. Liefdat.'].notna()
+        & zek103_data['Best. Liefdat.'].astype(str).str.strip().ne('')
+    )
+    confirmed_quantity_lower = zek103_data['Off. Mg'] > zek103_data['Bestät. Menge']
+
+    zek103_data['_output_lieferdatum'] = zek103_data['Lieferdatum']
+    zek103_data['_output_off_mg'] = zek103_data['Off. Mg']
+
+    zek103_data.loc[confirmed_quantity_lower, '_output_off_mg'] = zek103_data.loc[
+        confirmed_quantity_lower, 'Bestät. Menge'
+    ]
+    zek103_data.loc[confirmed_delivery_date_present, '_output_lieferdatum'] = zek103_data.loc[
+        confirmed_delivery_date_present, 'Best. Liefdat.'
+    ]
+    zek103_data.loc[confirmed_delivery_date_present, '_output_off_mg'] = zek103_data.loc[
+        confirmed_delivery_date_present, 'Bestät. Menge'
+    ]
+
+    zek103_data_grouped = (
+        zek103_data
+        .groupby(['_output_lieferdatum', 'Mat'], as_index=False)['_output_off_mg']
+        .sum()
+        .rename(columns={
+            '_output_lieferdatum': 'Lieferdatum',
+            '_output_off_mg': 'Off. Mg',
+        })
+    )
 
     zek103_data_grouped['Lieferdatum'] = pd.to_datetime(zek103_data_grouped['Lieferdatum'])  # opcjonalna konwersja na datę
     zek103_data_grouped['delayed'] = zek103_data_grouped['Lieferdatum'] < pd.Timestamp('today').normalize()
