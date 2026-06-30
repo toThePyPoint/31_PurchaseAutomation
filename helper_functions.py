@@ -7,6 +7,10 @@ import glob
 from pathlib import Path
 import time
 import logging
+import numpy as np
+import openpyxl
+import pandas as pd
+from openpyxl import load_workbook
 
 
 def get_supplier_sap_numbers(filepath, sheet_name=None):
@@ -53,42 +57,63 @@ def get_supplier_sap_numbers(filepath, sheet_name=None):
     return sap_numbers
 
 def get_zek103_data(zek103_data, plant, sap_numbers):
-    zek103_data = zek103_data[zek103_data['Werk'] == plant]
-    zek103_data = zek103_data[zek103_data['Mat'].isin(sap_numbers)]
+    zek103_data = zek103_data[zek103_data["Werk"] == plant]
+    zek103_data = zek103_data[zek103_data["Mat"].isin(sap_numbers)]
 
-    # Implement the logic which ensures operating on appropriate set of data (date of delivery and order quantity)
     zek103_data = zek103_data.copy()
-    confirmed_delivery_date_present = (
-        zek103_data['Best. Liefdat.'].notna()
-        & zek103_data['Best. Liefdat.'].astype(str).str.strip().ne('')
+
+    # 1. Konwersja kolumn na liczby (ochrona przed tekstem '0') i czyszczenie dat
+    zek103_data["Bestät. Menge"] = pd.to_numeric(
+        zek103_data["Bestät. Menge"]
+    ).fillna(0)
+    zek103_data["Off. Mg"] = pd.to_numeric(zek103_data["Off. Mg"]).fillna(0)
+
+    # Ujednolicenie pustych komórek w datach do formatu tekstowego na potrzeby czyszczenia
+    best_liefdat_clean = (
+        zek103_data["Best. Liefdat."].astype(str).str.strip()
     )
-    confirmed_quantity_lower = zek103_data['Off. Mg'] > zek103_data['Bestät. Menge']
+    has_valid_date = (
+        zek103_data["Best. Liefdat."].notna()
+        & (best_liefdat_clean != "")
+        & (best_liefdat_clean != "nan")
+        & (best_liefdat_clean != "NaT")
+    )
 
-    zek103_data['_output_lieferdatum'] = zek103_data['Lieferdatum']
-    zek103_data['_output_off_mg'] = zek103_data['Off. Mg']
+    # 2. Główny warunek: jest poprawna data ORAZ potwierdzona ilość nie jest zerem
+    warunek_glowny = has_valid_date & (zek103_data["Bestät. Menge"] != 0)
 
-    zek103_data.loc[confirmed_quantity_lower, '_output_off_mg'] = zek103_data.loc[
-        confirmed_quantity_lower, 'Bestät. Menge'
+    # 3. Ustawienie wartości domyślnych (wariant "w przeciwnym razie")
+    zek103_data["_output_lieferdatum"] = zek103_data["Lieferdatum"]
+    zek103_data["_output_off_mg"] = zek103_data["Off. Mg"]
+
+    # 4. Zastosowanie głównej logiki (jeśli warunek spełniony -> bierz L i J)
+    zek103_data.loc[warunek_glowny, "_output_lieferdatum"] = zek103_data.loc[
+        warunek_glowny, "Best. Liefdat."
     ]
-    zek103_data.loc[confirmed_delivery_date_present, '_output_lieferdatum'] = zek103_data.loc[
-        confirmed_delivery_date_present, 'Best. Liefdat.'
-    ]
-    zek103_data.loc[confirmed_delivery_date_present, '_output_off_mg'] = zek103_data.loc[
-        confirmed_delivery_date_present, 'Bestät. Menge'
+    zek103_data.loc[warunek_glowny, "_output_off_mg"] = zek103_data.loc[
+        warunek_glowny, "Bestät. Menge"
     ]
 
+    # 5. Grupowanie i sumowanie danych
     zek103_data_grouped = (
-        zek103_data
-        .groupby(['_output_lieferdatum', 'Mat'], as_index=False)['_output_off_mg']
+        zek103_data.groupby(["_output_lieferdatum", "Mat"], as_index=False)[
+            "_output_off_mg"
+        ]
         .sum()
-        .rename(columns={
-            '_output_lieferdatum': 'Lieferdatum',
-            '_output_off_mg': 'Off. Mg',
-        })
+        .rename(
+            columns={
+                "_output_lieferdatum": "Lieferdatum",
+                "_output_off_mg": "Off. Mg",
+            }
+        )
     )
 
-    zek103_data_grouped['Lieferdatum'] = pd.to_datetime(zek103_data_grouped['Lieferdatum'])  # opcjonalna konwersja na datę
-    zek103_data_grouped['delayed'] = zek103_data_grouped['Lieferdatum'] < pd.Timestamp('today').normalize()
+    zek103_data_grouped["Lieferdatum"] = pd.to_datetime(
+        zek103_data_grouped["Lieferdatum"]
+    )
+    zek103_data_grouped["delayed"] = zek103_data_grouped[
+        "Lieferdatum"
+    ] < pd.Timestamp("today").normalize()
 
     print("ZEK103_data: ", zek103_data_grouped)
     return zek103_data_grouped
