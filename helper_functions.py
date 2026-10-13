@@ -1,16 +1,13 @@
-import pandas as pd
-from openpyxl import load_workbook
-import openpyxl
 import datetime
 import os
 import glob
 from pathlib import Path
 import time
 import logging
-import numpy as np
 import openpyxl
 import pandas as pd
 from openpyxl import load_workbook
+import sqlite3
 
 
 def get_supplier_sap_numbers(filepath, sheet_name=None):
@@ -472,3 +469,96 @@ def retry(
             )
 
             time.sleep(wait_time)
+
+
+def consolidate_and_save_data(data_dict, export_dir):
+    """
+    Consolidates a dictionary of pandas DataFrames and saves the result to an Excel file.
+
+    :param data_dict: dictionary where values are pd.DataFrame objects
+    :param export_dir: target directory path string
+    """
+    # 1. Ensure the export directory exists
+    os.makedirs(export_dir, exist_ok=True)
+
+    if not data_dict:
+        print("The dictionary is empty. No data to consolidate.")
+        return
+
+    # 2. Consolidate all DataFrames
+    # Option A: Standard vertical concatenation (ignoring old indices)
+    combined_df = pd.concat(data_dict.values(), ignore_index=True)
+
+    # Option B (alternative): If you want to keep the dictionary key as a column (e.g., 'source_key'):
+    # combined_df = pd.concat(data_dict, ignore_index=True, names=['source_key']).reset_index(level=0)
+
+    # 3. Define the output file path
+    output_filename = 'combined_consumption_df.xlsx'
+    output_file_path = os.path.join(export_dir, output_filename)
+
+    # 4. Save to Excel
+    combined_df.to_excel(output_file_path, index=False)
+    print(f"File successfully saved to: {output_file_path}")
+
+
+def update_sap_database(data_dict, export_dir):
+    """
+    Consolidates data frames from a dictionary and upserts them into a SQLite database,
+    preventing duplicates based on a composite key: Material, date, plant.
+    """
+    os.makedirs(export_dir, exist_ok=True)
+    db_path = os.path.join(export_dir, 'sap_consumption.db')
+
+    if not data_dict:
+        print("The dictionary is empty. No data to process.")
+        return
+
+    # 1. Consolidate current exports into a single DataFrame
+    new_data_df = pd.concat(data_dict.values(), ignore_index=True)
+
+    # Ensure column names match your DB expectations (e.g., lowercase or exact match)
+    # Assuming columns are named: 'Material', 'date', 'plant', plus other metric columns
+
+    # 2. Connect to SQLite database (creates it if it doesn't exist)
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    try:
+        # 3. Create table with a UNIQUE constraint on the composite key
+        # (Adjust data types TEXT/REAL/INTEGER as needed for your SAP columns)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS consumption (
+                Material TEXT,
+                date DATE,
+                plant TEXT,
+                quantity REAL,
+                source_file TEXT,
+                group_key TEXT,
+                PRIMARY KEY (Material, date, plant)
+            )
+        """)
+        conn.commit()
+
+        # 4. Insert data using "INSERT OR IGNORE" (or "INSERT OR REPLACE" if newer data should overwrite)
+        # To do this efficiently with pandas + sqlite, we can write to a temp table and use SQL INSERT OR IGNORE
+        new_data_df.to_sql('temp_consumption', conn, if_exists='replace', index=False)
+
+        # Get column names dynamically for the SQL query
+        columns = list(new_data_df.columns)
+        col_str = ", ".join(columns)
+
+        cursor.execute(f"""
+            INSERT INTO consumption ({col_str})
+            SELECT {col_str} FROM temp_consumption
+            WHERE true
+            ON CONFLICT(Material, date, plant) DO NOTHING
+        """)
+
+        # Clean up temp table
+        cursor.execute("DROP TABLE temp_consumption")
+        conn.commit()
+
+    finally:
+        conn.close()
+
+    print(f"Database successfully updated. Data saved/merged in: {db_path}")
