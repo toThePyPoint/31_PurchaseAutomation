@@ -562,3 +562,18 @@ def update_sap_database(data_dict, export_dir):
         conn.close()
 
     print(f"Database successfully updated. Data saved/merged in: {db_path}")
+
+
+def get_consumption_from_database(db_dir, db_name, items_list: list, plant: str):
+    db_path = os.path.join(db_dir, db_name)
+    # Połączenie z bazą danych
+    conn = sqlite3.connect(db_path)
+
+    # Odczyt całej tabeli 'consumption' do DataFrame
+    df = pd.read_sql("SELECT * FROM consumption", conn)
+    df['date'] = pd.to_datetime(df['date'])
+    df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce')
+
+    conn.close()
+
+    return df

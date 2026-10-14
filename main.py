@@ -18,7 +18,9 @@ from helper_functions import (
     load_grouped_mb51_dataframes,
     retrieve_supplier_name,
     retrieve_plant,
-    retry
+    retry,
+    update_sap_database,
+    get_consumption_from_database
 )
 
 from suppliers_map import supplier_files_dict
@@ -46,6 +48,22 @@ MB51_new_col_names = {
     'Basis-ME': 'unit',
     'Werk': 'plant'
 }
+#
+# ZEK_103_new_col_names = {
+#     "Lieferant": "LFT",
+#     "SuchBegr": "SuchBegr",
+#     "EinkBeleg": "Best-Nr",
+#     "Pos": "Pos",
+#     "Material": "Mat",
+#     "Kurztext": "Benennung",
+#     "Lieferdatum": "Lieferdatum",
+#     # "Lieferdatum": "Best. Liefdat.",
+#     # "Bestellmenge": "Best-Mg",
+#     "Bestellmenge": "Bestät. Menge",
+#     "Menge": "Off. Mg",
+#     "BME": "ME",
+#     "Werk": "Werk"
+# }
 
 zek103_file_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION\ZEK103_PUR_LUB_002.xlsx"
 mb52_file_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION\MB52_PUR_LUB_003.xlsx"
@@ -75,6 +93,8 @@ if __name__ == "__main__":
     )
     try:
         zek103_content = pd.read_excel(zek103_file_path, dtype=zek103_dtypes)
+        # zek103_content = zek103_content.rename(columns=ZEK_103_new_col_names)
+        # zek103_content['Best. Liefdat.'] = zek103_content["Lieferdatum"]
         mb52df = get_mb52_data(mb52_file_path, mb52_dtypes)
 
         # DONE: Get dfs for all exported files
@@ -84,12 +104,16 @@ if __name__ == "__main__":
             base_path=export_files_directory_path,
             extension=".xlsx",
             dtypes_mb51=mb51_consumption_dtypes,
-            col_names_mb51=MB51_new_col_names
+            col_names_mb51=MB51_new_col_names,
+            # ignore_missing=True
         )
+
+        # Update SAP Data Base
+        update_sap_database(MB551_dfs, export_files_directory_path)
 
 
         # TODO: Change path
-        supplier_files_paths = list_excel_files(supplier_files_directory_path)
+        supplier_files_paths = list_excel_files(supplier_files_directory_path_test)
         print(supplier_files_paths)
 
         storage_locs = ('0003', '0004', '0005', '0007', '0710', '0002', '0610', '0680', '0630', '0670', '0600', '0611', '0620', '0631', '0632', '0640', '0650', '0660', '0690', '0700')
@@ -102,16 +126,17 @@ if __name__ == "__main__":
         year_ago = today - datetime.timedelta(days=365)
 
         past_20_days_now = get_past_workdays(today, 20, 'last', pl_holidays)
-        past_20_days_year_ago = get_past_workdays(year_ago, 20, 'last', pl_holidays)
-        next_20_days_year_ago = get_past_workdays(year_ago, 20, 'next', pl_holidays)
-        past_60_days_now = get_past_workdays(today, 60, 'last', pl_holidays)
-        past_60_days_year_ago = get_past_workdays(year_ago, 60, 'last', pl_holidays)
+        # past_20_days_year_ago = get_past_workdays(year_ago, 20, 'last', pl_holidays)
+        # next_20_days_year_ago = get_past_workdays(year_ago, 20, 'next', pl_holidays)
+        past_80_days_now = get_past_workdays(today, 80, 'last', pl_holidays)
+        # past_60_days_year_ago = get_past_workdays(year_ago, 60, 'last', pl_holidays)
 
-        usage_parameters = [(next_20_days_year_ago, 'C'),
+        usage_parameters = [
+                            # (next_20_days_year_ago, 'C'),
                             (past_20_days_now, 'D'),
-                            (past_20_days_year_ago, 'E'),
-                            (past_60_days_now, 'F'),
-                            (past_60_days_year_ago, 'G'),
+                            # (past_20_days_year_ago, 'E'),
+                            (past_80_days_now, 'F'),
+                            # (past_60_days_year_ago, 'G'),
         ]
 
         for file_path in supplier_files_paths:
@@ -119,10 +144,14 @@ if __name__ == "__main__":
             excel_sheet = f"data"
 
             # DONE: Retrieve supplier name from file path and get corresponding df
-            supplier_name = retrieve_supplier_name(file_path)
-            z_mat_or_mb51_consumption_df = MB551_dfs[supplier_files_dict[supplier_name][0]]
+            # supplier_name = retrieve_supplier_name(file_path)
+            # z_mat_or_mb51_consumption_df = MB551_dfs[supplier_files_dict[supplier_name][0]]
 
             sap_list = get_supplier_sap_numbers(file_path, excel_sheet)
+
+            z_mat_or_mb51_consumption_df = get_consumption_from_database(export_files_directory_path,
+                                                                      "sap_consumption.db", sap_list, plant)
+
             zek103_output = get_zek103_data(zek103_content, plant, sap_list)
             retry(update_excel_with_quantities,
                   filepath=file_path,
