@@ -3,6 +3,8 @@ import datetime
 import holidays
 import traceback
 import logging
+import os
+import sys
 
 from helper_functions import (
     get_supplier_sap_numbers,
@@ -28,6 +30,7 @@ from suppliers_map import supplier_files_dict
 zek103_dtypes = {
     'Werk': 'string',
     'Mat': 'string',
+    'Material': 'string',
 }
 
 mb52_dtypes = {
@@ -48,22 +51,23 @@ MB51_new_col_names = {
     'Basis-ME': 'unit',
     'Werk': 'plant'
 }
-#
-# ZEK_103_new_col_names = {
-#     "Lieferant": "LFT",
-#     "SuchBegr": "SuchBegr",
-#     "EinkBeleg": "Best-Nr",
-#     "Pos": "Pos",
-#     "Material": "Mat",
-#     "Kurztext": "Benennung",
-#     "Lieferdatum": "Lieferdatum",
-#     # "Lieferdatum": "Best. Liefdat.",
-#     # "Bestellmenge": "Best-Mg",
-#     "Bestellmenge": "Bestät. Menge",
-#     "Menge": "Off. Mg",
-#     "BME": "ME",
-#     "Werk": "Werk"
-# }
+
+# TODO: Adjust to new headers
+ZEK_103_new_col_names = {
+    "Lieferant": "LFT",
+    "SuchBegr": "SuchBegr",
+    "EinkBeleg": "Best-Nr",
+    "Pos": "Pos",
+    "Material": "Mat",
+    "Kurztext": "Benennung",
+    "Lieferdatum": "Lieferdatum",
+    "Lieferdatum 1": "Best. Liefdat.",
+    # "Bestellmenge": "Best-Mg",
+    "Bestellmenge": "Bestät. Menge",
+    "Menge": "Off. Mg",
+    "BME": "ME",
+    "Werk": "Werk"
+}
 
 zek103_file_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION\ZEK103_PUR_LUB_002.xlsx"
 mb52_file_path = r"\\rfmesrv5\connect\DST_SAP_Transfer\P11\PPS_LUB\05_PURCHASING_AUTOMATION\MB52_PUR_LUB_003.xlsx"
@@ -91,9 +95,20 @@ if __name__ == "__main__":
             logging.StreamHandler()
         ]
     )
+
+    today = datetime.datetime.now().date()
+    files = {"ZEK 103": zek103_file_path, "MB52": mb52_file_path}
+    outdated = [name for name, path in files.items() if datetime.datetime.fromtimestamp(os.path.getmtime(path)).date() != today]
+
+    if outdated:
+        print(f"⚠️ Uwaga: Pliki {', '.join(outdated)} nie zostały wygenerowane dzisiaj.")
+        if input("Czy chcesz kontynuować? [t/n]: ").strip().lower() not in ['t', 'tak', 'y', 'yes']:
+            sys.exit("Program przerwany.")
+
     try:
         zek103_content = pd.read_excel(zek103_file_path, dtype=zek103_dtypes)
-        # zek103_content = zek103_content.rename(columns=ZEK_103_new_col_names)
+        # TODO: Adjust to new headers
+        zek103_content = zek103_content.rename(columns=ZEK_103_new_col_names)
         # zek103_content['Best. Liefdat.'] = zek103_content["Lieferdatum"]
         mb52df = get_mb52_data(mb52_file_path, mb52_dtypes)
 

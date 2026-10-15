@@ -1,4 +1,4 @@
-import datetime
+from datetime import date, timedelta
 import os
 import glob
 from pathlib import Path
@@ -155,7 +155,7 @@ def update_excel_with_quantities(filepath, df, header_upper_bound, header_lower_
 
     for col in range(13, sheet.max_column + 1):  # Column index starts at M (13th column)
         date_value = sheet.cell(row=1, column=col).value
-        if isinstance(date_value, pd.Timestamp) or isinstance(date_value, datetime.date):
+        if isinstance(date_value, pd.Timestamp) or isinstance(date_value, date):
             date_value = pd.Timestamp(date_value)  # Ensure it is a pandas Timestamp
         if date_value:
             date_columns[date_value.date()] = col
@@ -301,9 +301,9 @@ def get_past_workdays(start_date, num_days, mode="last", country_holidays=None):
 
     while len(workdays) < num_days:
         if mode == 'last':
-            current_date -= datetime.timedelta(days=1)
+            current_date -= timedelta(days=1)
         elif mode == "next":
-            current_date += datetime.timedelta(days=1)
+            current_date += timedelta(days=1)
         # Sprawdź, czy to dzień roboczy
         if current_date.weekday() < 5:  # poniedziałek=0, piątek=4
             if country_holidays is None or current_date not in country_holidays:
@@ -312,6 +312,7 @@ def get_past_workdays(start_date, num_days, mode="last", country_holidays=None):
     return workdays
 
 def filter_z_mat_consumption_data(consumption_df, mat_list, days_range, plant):
+    days_range = pd.to_datetime(days_range)
     consumption_df_filtered = consumption_df[(consumption_df['date'].isin(days_range)) & (consumption_df['Material'].isin(mat_list)) & (consumption_df['plant'] == plant)]
     consumption_df_grouped = consumption_df_filtered.groupby('Material', as_index=False)['quantity'].sum()
 
@@ -359,6 +360,54 @@ def load_grouped_mb51_dataframes(
     base_path = Path(base_path)
     result = {}
 
+    # 1. Validate file modification dates before loading
+    outdated_files = []
+
+    for file_list in grouped_files.values():
+        for file_name in file_list:
+            file_path = base_path / f"{file_name}{extension}"
+
+            if not file_path.exists():
+                # Missing files are handled later according to ignore_missing
+                continue
+
+            modified_date = date.fromtimestamp(file_path.stat().st_mtime)
+
+            if modified_date != date.today():
+                outdated_files.append(
+                    (file_path, modified_date)
+                )
+
+    # 2. Ask the user how to proceed if any files are outdated
+    if outdated_files:
+        print("\nWARNING: The following files were not modified today:\n")
+
+        for file_path, modified_date in outdated_files:
+            print(
+                f"  - {file_path.name} "
+                f"(last modified: {modified_date:%Y-%m-%d})"
+            )
+
+        while True:
+            decision = input(
+                "\nDo you want to continue with these files? "
+                "[Y]es / [N]o: "
+            ).strip().lower()
+
+            if decision in ("y", "yes"):
+                print("\nContinuing with file loading...\n")
+                break
+
+            elif decision in ("n", "no"):
+                raise SystemExit(
+                    "Program aborted by user because some files "
+                    "were not modified today."
+                )
+
+            else:
+                print("Invalid choice. Please enter Y or N.")
+
+    # 3. Load and combine the files
     for group_key, file_list in grouped_files.items():
         print(f"Processing {group_key}")
         dataframes = []
